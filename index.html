@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laguna Province Disaster Management & Weather Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
+    <style>
+        :root {
+            --primary: #0d6efd;
+            --secondary: #6c757d;
+            --success: #198754;
+            --warning: #ffc107;
+            --danger: #dc3545;
+            --info: #0dcaf0;
+            --light: #f8f9fa;
+            --dark: #212529;
+            --laguna-blue: #0056b3;
+            --laguna-green: #28a745;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f5f7fa;
+            color: #333;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 15px;
+        }
+        
+        header {
+            background: linear-gradient(135deg, var(--laguna-blue), #0a4297);
+            color: white;
+            padding: 1.2rem 0;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .logo {
+            width: 60px;
+            height: 60px;
+            background-color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: var(--laguna-blue);
+        }
+        
+        h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+        
+        .subtitle {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            margin-top: 5px;
+        }
+        
+        .current-time {
+            text-align: right;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+        
+        .date-display {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        
+        .alert-banner {
+            background-color: #fff3cd;
+            border-left: 5px solid var(--warning);
+            padding: 12px 20px;
+            margin: 15px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-radius: 0 5px 5px 0;
+        }
+        
+        .alert-banner.danger {
+            background-color: #f8d7da;
+            border-left-color: var(--danger);
+        }
+        
+        .alert-banner.info {
+            background-color: #d1ecf1;
+            border-left-color: var(--info);
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1.5fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .card {
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            margin-bottom: 20px;
+        }
+        
+        .card-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--laguna-blue);
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f0f0f0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .location-selector {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .location-btn {
+            padding: 12px;
+            background-color: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+        
+        .location-btn:hover {
+            background-color: #e9ecef;
+        }
+        
+        .location-btn.active {
+            background-color: var(--laguna-blue);
+            color: white;
+            border-color: var(--laguna-blue);
+        }
+        
+        .weather-display {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 20px 0;
+        }
+        
+        .temp-display {
+            font-size: 3.5rem;
+            font-weight: 700;
+            color: var(--dark);
+        }
+        
+        .weather-icon {
+            font-size: 4rem;
+            color: var(--warning);
+        }
+        
+        .weather-details {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .detail-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .map-container {
+            height: 400px;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        
+        #map {
+            height: 100%;
+            width: 100%;
+        }
+        
+        .alert-settings {
+            margin-top: 25px;
+        }
+        
+        .threshold-control {
+            margin-bottom: 20px;
+        }
+        
+        .threshold-control label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        
+        .threshold-value {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 5px;
+        }
+        
+        .threshold-value span {
+            font-weight: 600;
+            color: var(--laguna-blue);
+        }
+        
+        input[type="range"] {
+            width: 100%;
+            height: 8px;
+            border-radius: 5px;
+            background: #e9ecef;
+            outline: none;
+        }
+        
+        .alerts-list {
+            margin-top: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .alert-item {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 5px solid;
+            background-color: #f8f9fa;
+        }
+        
+        .alert-item.warning {
+            border-left-color: var(--warning);
+            background-color: #fff3cd;
+        }
+        
+        .alert-item.danger {
+            border-left-color: var(--danger);
+            background-color: #f8d7da;
+        }
+        
+        .alert-item.info {
+            border-left-color: var(--info);
+            background-color: #d1ecf1;
+        }
+        
+        .alert-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+        
+        .alert-time {
+            font-size: 0.85rem;
+            opacity: 0.7;
+        }
+        
+        .data-source {
+            font-size: 0.8rem;
+            color: var(--secondary);
+            margin-top: 20px;
+            text-align: center;
+            font-style: italic;
+        }
+        
+        footer {
+            background-color: var(--dark);
+            color: white;
+            padding: 20px 0;
+            margin-top: 30px;
+            text-align: center;
+        }
+        
+        @media (max-width: 992px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .header-content {
+                flex-direction: column;
+                text-align: center;
+                gap: 15px;
+            }
+            
+            .current-time {
+                text-align: center;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .location-selector {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .weather-display {
+                flex-direction: column;
+                text-align: center;
+                gap: 15px;
+            }
+            
+            .weather-details {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <div class="logo-container">
+                    <div class="logo">
+                        <i class="fas fa-cloud-sun-rain"></i>
+                    </div>
+                    <div>
+                        <h1>Laguna Province Disaster Management Dashboard</h1>
+                        <div class="subtitle">Real-time Weather Monitoring & Emergency Alert System</div>
+                    </div>
+                </div>
+                <div class="current-time">
+                    <div id="current-time">Loading time...</div>
+                    <div class="date-display" id="current-date">Loading date...</div>
+                </div>
+            </div>
+        </div>
+    </header>
+    
+    <div class="container">
+        <!-- Alert Banner -->
+        <div class="alert-banner info" id="alert-banner">
+            <div>
+                <i class="fas fa-info-circle"></i> 
+                <span id="alert-text">Monitoring weather conditions across Laguna Province. No active alerts at this time.</span>
+            </div>
+            <div>
+                <button class="btn-refresh" onclick="refreshData()" style="background: none; border: none; color: #0a58ca; cursor: pointer;">
+                    <i class="fas fa-sync-alt"></i> Refresh Data
+                </button>
+            </div>
+        </div>
+        
+        <div class="main-content">
+            <!-- Left Column -->
+            <div class="left-column">
+                <!-- Location Selection -->
+                <div class="card">
+                    <h2 class="card-title">
+                        <i class="fas fa-map-marker-alt"></i> Select Location in Laguna
+                    </h2>
+                    <p>Choose a municipality/city to view detailed weather information and set alert thresholds.</p>
+                    
+                    <div class="location-selector" id="location-selector">
+                        <!-- Location buttons will be generated by JavaScript -->
+                    </div>
+                </div>
+                
+                <!-- Weather Data -->
+                <div class="card">
+                    <h2 class="card-title">
+                        <i class="fas fa-temperature-high"></i> Current Weather Conditions
+                    </h2>
+                    <div class="weather-display">
+                        <div>
+                            <div class="temp-display" id="current-temp">--°C</div>
+                            <div id="weather-desc">--</div>
+                            <div id="current-location">Select a location</div>
+                        </div>
+                        <div class="weather-icon">
+                            <i class="fas fa-sun" id="weather-icon"></i>
+                        </div>
+                    </div>
+                    
+                    <div class="weather-details">
+                        <div class="detail-item">
+                            <span>Feels Like</span>
+                            <span id="feels-like">--°C</span>
+                        </div>
+                        <div class="detail-item">
+                            <span>Humidity</span>
+                            <span id="humidity">--%</span>
+                        </div>
+                        <div class="detail-item">
+                            <span>Wind Speed</span>
+                            <span id="wind-speed">-- km/h</span>
+                        </div>
+                        <div class="detail-item">
+                            <span>Rainfall (24h)</span>
+                            <span id="rainfall">-- mm</span>
+                        </div>
+                        <div class="detail-item">
+                            <span>Pressure</span>
+                            <span id="pressure">-- hPa</span>
+                        </div>
+                        <div class="detail-item">
+                            <span>Visibility</span>
+                            <span id="visibility">-- km</span>
+                        </div>
+                    </div>
+                    
+                    <div class="data-source">
+                        Data sourced from PAGASA and Laguna PDRRMO
+                    </div>
+                </div>
+                
+                <!-- Alert Settings -->
+                <div class="card">
+                    <h2 class="card-title">
+                        <i class="fas fa-bell"></i> Alert Threshold Settings
+                    </h2>
+                    <p>Configure alert thresholds for automatic disaster warnings. Alerts will trigger when thresholds are exceeded.</p>
+                    
+                    <div class="alert-settings">
+                        <div class="threshold-control">
+                            <label for="rain-threshold">Rainfall Alert (mm/24h)</label>
+                            <input type="range" id="rain-threshold" min="0" max="200" value="50" step="5">
+                            <div class="threshold-value">
+                                <span>Threshold:</span>
+                                <span id="rain-threshold-value">50 mm</span>
+                            </div>
+                        </div>
+                        
+                        <div class="threshold-control">
+                            <label for="wind-threshold">Wind Speed Alert (km/h)</label>
+                            <input type="range" id="wind-threshold" min="0" max="150" value="40" step="5">
+                            <div class="threshold-value">
+                                <span>Threshold:</span>
+                                <span id="wind-threshold-value">40 km/h</span>
+                            </div>
+                        </div>
+                        
+                        <div class="threshold-control">
+                            <label for="flood-threshold">Flood Alert (Water Level)</label>
+                            <input type="range" id="flood-threshold" min="0" max="10" value="3" step="0.5">
+                            <div class="threshold-value">
+                                <span>Threshold:</span>
+                                <span id="flood-threshold-value">3 meters</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Right Column -->
+            <div class="right-column">
+                <!-- Map -->
+                <div class="card">
+                    <h2 class="card-title">
+                        <i class="fas fa-map"></i> Laguna Province Map
+                    </h2>
+                    <p>Real-time monitoring of weather conditions across Laguna municipalities.</p>
+                    
+                    <div class="map-container">
+                        <div id="map"></div>
+                    </div>
+                </div>
+                
+                <!-- Active Alerts -->
+                <div class="card">
+                    <h2 class="card-title">
+                        <i class="fas fa-exclamation-triangle"></i> Active Alerts & Warnings
+                    </h2>
+                    <p>Real-time alerts based on configured thresholds and PAGASA warnings.</p>
+                    
+                    <div class="alerts-list" id="alerts-list">
+                        <!-- Alerts will be generated by JavaScript -->
+                    </div>
+                </div>
+                
+                <!-- Disaster Preparedness Info -->
+                <div class="card">
+                    <h2 class="card-title">
+                        <i class="fas fa-first-aid"></i> Disaster Preparedness
+                    </h2>
+                    <p>Key contacts and resources for Laguna Disaster Risk Reduction and Management Office (PDRRMO)</p>
+                    
+                    <div class="emergency-contacts">
+                        <div style="display: flex; justify-content: space-between; margin-top: 15px; flex-wrap: wrap;">
+                            <div style="margin-bottom: 15px;">
+                                <h4 style="color: var(--danger); margin-bottom: 5px;"><i class="fas fa-phone-alt"></i> Emergency Hotlines</h4>
+                                <div>Laguna PDRRMO: (049) 576-0794</div>
+                                <div>NDRRMC: 911</div>
+                                <div>PAGASA: (02) 8284-0800</div>
+                            </div>
+                            <div style="margin-bottom: 15px;">
+                                <h4 style="color: var(--danger); margin-bottom: 5px;"><i class="fas fa-exclamation-circle"></i> Current Status</h4>
+                                <div id="disaster-status">All systems operational</div>
+                                <div id="alert-level" style="font-weight: 600; color: green;">Alert Level: Normal</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <footer>
+        <div class="container">
+            <p>Laguna Province Disaster Risk Reduction and Management Office. Powered by Dimax Technologes Center (PDRRMO)</p>
+            <p>Real-time data integrated from PAGASA (Philippine Atmospheric, Geophysical and Astronomical Services Administration)</p>
+            <p>© 2026 Laguna Province Command Center. For emergency use only.</p>
+        </div>
+    </footer>
+
+    <!-- Leaflet JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+    <script>
+        // Initialize current date and time
+        function updateDateTime() {
+            const now = new Date();
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('current-date').textContent = now.toLocaleDateString('en-PH', options);
+            document.getElementById('current-time').textContent = now.toLocaleTimeString('en-PH', { hour12: true });
+        }
+        
+        // Update time every second
+        setInterval(updateDateTime, 1000);
+        updateDateTime();
+        
+        // Laguna municipalities data
+        const lagunaLocations = [
+            { id: "stacruz", name: "Santa Cruz", lat: 14.2833, lng: 121.4167, temp: 29.5, rainfall: 12, wind: 8, humidity: 78, pressure: 1013, status: "normal" },
+            { id: "calamba", name: "Calamba", lat: 14.2167, lng: 121.1667, temp: 30.2, rainfall: 8, wind: 12, humidity: 75, pressure: 1012, status: "normal" },
+            { id: "sanpablo", name: "San Pablo", lat: 14.0667, lng: 121.3250, temp: 28.8, rainfall: 45, wind: 15, humidity: 82, pressure: 1011, status: "rain_alert" },
+            { id: "biñan", name: "Biñan", lat: 14.3333, lng: 121.0833, temp: 31.0, rainfall: 5, wind: 10, humidity: 72, pressure: 1013, status: "normal" },
+            { id: "cabuyao", name: "Cabuyao", lat: 14.2750, lng: 121.1250, temp: 30.5, rainfall: 7, wind: 9, humidity: 76, pressure: 1012, status: "normal" },
+            { id: "losbanos", name: "Los Baños", lat: 14.1667, lng: 121.2417, temp: 29.2, rainfall: 25, wind: 18, humidity: 80, pressure: 1011, status: "wind_alert" },
+            { id: "sanpedro", name: "San Pedro", lat: 14.3583, lng: 121.0583, temp: 31.5, rainfall: 3, wind: 7, humidity: 70, pressure: 1014, status: "normal" },
+            { id: "starosa", name: "Santa Rosa", lat: 14.3167, lng: 121.1167, temp: 30.8, rainfall: 6, wind: 11, humidity: 74, pressure: 1013, status: "normal" },
+            { id: "bay", name: "Bay", lat: 14.1833, lng: 121.2833, temp: 29.0, rainfall: 60, wind: 20, humidity: 85, pressure: 1010, status: "flood_alert" },
+            { id: "calauan", name: "Calauan", lat: 14.1500, lng: 121.3167, temp: 28.5, rainfall: 55, wind: 16, humidity: 83, pressure: 1010, status: "rain_alert" }
+        ];
+        
+        // Initialize map
+        let map = L.map('map').setView([14.2333, 121.3667], 10);
+        
+        // Add OpenStreetMap tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+        
+        // Add markers for each location
+        let markers = [];
+        lagunaLocations.forEach(location => {
+            let markerColor = 'green';
+            if (location.status === 'rain_alert') markerColor = 'blue';
+            if (location.status === 'wind_alert') markerColor = 'orange';
+            if (location.status === 'flood_alert') markerColor = 'red';
+            
+            const marker = L.marker([location.lat, location.lng], {
+                icon: L.divIcon({
+                    html: `<div style="background-color: ${markerColor}; width: 20px; height: 20px; border-radius: 50%; border: 2px solid white;"></div>`,
+                    iconSize: [24, 24],
+                    className: 'location-marker'
+                })
+            }).addTo(map);
+            
+            marker.bindPopup(`<b>${location.name}</b><br>Temperature: ${location.temp}°C<br>Rainfall: ${location.rainfall}mm<br>Wind: ${location.wind} km/h`);
+            
+            markers.push({
+                id: location.id,
+                marker: marker,
+                location: location
+            });
+        });
+        
+        // Current selected location
+        let currentLocation = lagunaLocations[0];
+        
+        // Generate location buttons
+        const locationSelector = document.getElementById('location-selector');
+        lagunaLocations.forEach(location => {
+            const button = document.createElement('div');
+            button.className = 'location-btn';
+            if (location.id === currentLocation.id) button.classList.add('active');
+            button.textContent = location.name;
+            button.dataset.id = location.id;
+            
+            button.addEventListener('click', () => {
+                // Update active button
+                document.querySelectorAll('.location-btn').forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+                
+                // Update current location
+                currentLocation = location;
+                
+                // Update weather display
+                updateWeatherDisplay();
+                
+                // Center map on selected location
+                map.setView([location.lat, location.lng], 12);
+                
+                // Check for alerts
+                checkAlerts();
+            });
+            
+            locationSelector.appendChild(button);
+        });
+        
+        // Update weather display with current location data
+        function updateWeatherDisplay() {
+            document.getElementById('current-location').textContent = currentLocation.name;
+            document.getElementById('current-temp').textContent = `${currentLocation.temp}°C`;
+            document.getElementById('feels-like').textContent = `${currentLocation.temp + 2}°C`;
+            document.getElementById('humidity').textContent = `${currentLocation.humidity}%`;
+            document.getElementById('wind-speed').textContent = `${currentLocation.wind} km/h`;
+            document.getElementById('rainfall').textContent = `${currentLocation.rainfall} mm`;
+            document.getElementById('pressure').textContent = `${currentLocation.pressure} hPa`;
+            document.getElementById('visibility').textContent = `${currentLocation.humidity > 80 ? 5 : 10} km`;
+            
+            // Set weather description and icon based on conditions
+            let weatherDesc = "Partly Cloudy";
+            let weatherIcon = "fa-cloud-sun";
+            
+            if (currentLocation.rainfall > 40) {
+                weatherDesc = "Heavy Rain";
+                weatherIcon = "fa-cloud-showers-heavy";
+            } else if (currentLocation.rainfall > 20) {
+                weatherDesc = "Light Rain";
+                weatherIcon = "fa-cloud-rain";
+            } else if (currentLocation.wind > 30) {
+                weatherDesc = "Windy";
+                weatherIcon = "fa-wind";
+            } else if (currentLocation.temp > 32) {
+                weatherDesc = "Sunny";
+                weatherIcon = "fa-sun";
+            }
+            
+            document.getElementById('weather-desc').textContent = weatherDesc;
+            document.getElementById('weather-icon').className = `fas ${weatherIcon} weather-icon`;
+        }
+        
+        // Initialize threshold controls
+        document.getElementById('rain-threshold').addEventListener('input', function() {
+            document.getElementById('rain-threshold-value').textContent = `${this.value} mm`;
+            checkAlerts();
+        });
+        
+        document.getElementById('wind-threshold').addEventListener('input', function() {
+            document.getElementById('wind-threshold-value').textContent = `${this.value} km/h`;
+            checkAlerts();
+        });
+        
+        document.getElementById('flood-threshold').addEventListener('input', function() {
+            document.getElementById('flood-threshold-value').textContent = `${this.value} meters`;
+            checkAlerts();
+        });
+        
+        // Check for alerts based on thresholds
+        function checkAlerts() {
+            const rainThreshold = parseInt(document.getElementById('rain-threshold').value);
+            const windThreshold = parseInt(document.getElementById('wind-threshold').value);
+            const floodThreshold = parseFloat(document.getElementById('flood-threshold').value);
+            
+            let alerts = [];
+            let alertLevel = "Normal";
+            let alertColor = "info";
+            let alertText = "Monitoring weather conditions across Laguna Province.";
+            
+            // Check current location for alerts
+            if (currentLocation.rainfall > rainThreshold) {
+                alerts.push({
+                    type: "danger",
+                    title: "Heavy Rainfall Alert",
+                    message: `Rainfall in ${currentLocation.name} (${currentLocation.rainfall}mm) exceeds threshold (${rainThreshold}mm). Risk of flooding.`,
+                    time: new Date().toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' })
+                });
+                alertLevel = "Rain Alert";
+                alertColor = "danger";
+                alertText = `Heavy rainfall warning for ${currentLocation.name}. Flood risk increased.`;
+            }
+            
+            if (currentLocation.wind > windThreshold) {
+                alerts.push({
+                    type: "warning",
+                    title: "Strong Wind Alert",
+                    message: `Wind speed in ${currentLocation.name} (${currentLocation.wind}km/h) exceeds threshold (${windThreshold}km/h).`,
+                    time: new Date().toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' })
+                });
+                
+                if (alertLevel === "Normal") {
+                    alertLevel = "Wind Alert";
+                    alertColor = "warning";
+                    alertText = `Strong wind warning for ${currentLocation.name}. Secure loose objects.`;
+                }
+            }
+            
+            // Simulate flood alert for Bay (high rainfall area)
+            if (currentLocation.id === "bay" && currentLocation.rainfall > 50) {
+                alerts.push({
+                    type: "danger",
+                    title: "Flood Alert",
+                    message: `High rainfall in ${currentLocation.name} may cause flooding in low-lying areas.`,
+                    time: new Date().toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' })
+                });
+                alertLevel = "Flood Alert";
+                alertColor = "danger";
+                alertText = `Flood warning for ${currentLocation.name}. Evacuate low-lying areas if necessary.`;
+            }
+            
+            // Add PAGASA alerts (simulated)
+            if (currentLocation.rainfall > 60) {
+                alerts.push({
+                    type: "danger",
+                    title: "PAGASA Warning: Tropical Cyclone",
+                    message: "PAGASA issued Tropical Cyclone Warning Signal #1 for Laguna Province.",
+                    time: new Date().toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' })
+                });
+                alertLevel = "Cyclone Alert";
+                alertColor = "danger";
+                alertText = "PAGASA Tropical Cyclone Warning active. Prepare emergency supplies.";
+            }
+            
+            // Update alerts list
+            const alertsList = document.getElementById('alerts-list');
+            alertsList.innerHTML = '';
+            
+            if (alerts.length === 0) {
+                alertsList.innerHTML = '<div class="alert-item info"><div class="alert-header"><strong>No Active Alerts</strong></div><div class="alert-message">All conditions within normal parameters.</div></div>';
+            } else {
+                alerts.forEach(alert => {
+                    const alertItem = document.createElement('div');
+                    alertItem.className = `alert-item ${alert.type}`;
+                    alertItem.innerHTML = `
+                        <div class="alert-header">
+                            <strong>${alert.title}</strong>
+                            <span class="alert-time">${alert.time}</span>
+                        </div>
+                        <div class="alert-message">${alert.message}</div>
+                    `;
+                    alertsList.appendChild(alertItem);
+                });
+            }
+            
+            // Update alert banner
+            const alertBanner = document.getElementById('alert-banner');
+            alertBanner.className = `alert-banner ${alertColor}`;
+            document.getElementById('alert-text').textContent = alertText;
+            
+            // Update disaster status
+            document.getElementById('disaster-status').textContent = alerts.length > 0 ? `${alerts.length} active alert(s)` : "All systems operational";
+            document.getElementById('alert-level').textContent = `Alert Level: ${alertLevel}`;
+            document.getElementById('alert-level').style.color = alertColor === "danger" ? "red" : alertColor === "warning" ? "orange" : "green";
+        }
+        
+        // Simulate real-time data updates
+        function updateWeatherData() {
+            // Randomly adjust weather data to simulate real-time changes
+            lagunaLocations.forEach(location => {
+                // Small random changes to simulate real data
+                location.temp += (Math.random() - 0.5) * 0.5;
+                location.temp = Math.round(location.temp * 10) / 10;
+                
+                location.rainfall += (Math.random() - 0.3) * 5;
+                location.rainfall = Math.max(0, Math.round(location.rainfall));
+                
+                location.wind += (Math.random() - 0.5) * 3;
+                location.wind = Math.max(0, Math.round(location.wind));
+                
+                // Update marker colors based on status
+                let newStatus = "normal";
+                if (location.rainfall > 40) newStatus = "rain_alert";
+                if (location.wind > 35) newStatus = "wind_alert";
+                if (location.id === "bay" && location.rainfall > 50) newStatus = "flood_alert";
+                
+                location.status = newStatus;
+            });
+            
+            // Update current location display if needed
+            if (currentLocation) {
+                // Find updated location data
+                const updatedLocation = lagunaLocations.find(loc => loc.id === currentLocation.id);
+                if (updatedLocation) {
+                    currentLocation = updatedLocation;
+                    updateWeatherDisplay();
+                    checkAlerts();
+                }
+            }
+            
+            // Update markers on map
+            markers.forEach(markerObj => {
+                const location = lagunaLocations.find(loc => loc.id === markerObj.id);
+                if (location) {
+                    let markerColor = 'green';
+                    if (location.status === 'rain_alert') markerColor = 'blue';
+                    if (location.status === 'wind_alert') markerColor = 'orange';
+                    if (location.status === 'flood_alert') markerColor = 'red';
+                    
+                    // Update marker popup
+                    markerObj.marker.bindPopup(`<b>${location.name}</b><br>Temperature: ${location.temp}°C<br>Rainfall: ${location.rainfall}mm<br>Wind: ${location.wind} km/h`);
+                }
+            });
+        }
+        
+        // Refresh data manually
+        function refreshData() {
+            updateWeatherData();
+            
+            // Show refresh confirmation
+            const alertBanner = document.getElementById('alert-banner');
+            alertBanner.className = 'alert-banner info';
+            document.getElementById('alert-text').innerHTML = `<i class="fas fa-check-circle"></i> Weather data refreshed at ${new Date().toLocaleTimeString('en-PH', {hour: '2-digit', minute:'2-digit'})}`;
+            
+            // Reset after 3 seconds
+            setTimeout(() => {
+                checkAlerts();
+            }, 3000);
+        }
+        
+        // Initialize the display
+        updateWeatherDisplay();
+        checkAlerts();
+        
+        // Simulate real-time updates every 30 seconds
+        setInterval(updateWeatherData, 30000);
+        
+        // Add some sample alerts on load
+        window.addEventListener('load', function() {
+            // Add a sample alert after a short delay
+            setTimeout(() => {
+                const alertsList = document.getElementById('alerts-list');
+                const sampleAlert = document.createElement('div');
+                sampleAlert.className = 'alert-item warning';
+                sampleAlert.innerHTML = `
+                    <div class="alert-header">
+                        <strong>PAGASA Weather Advisory</strong>
+                        <span class="alert-time">${new Date().toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' })}</span>
+                    </div>
+                    <div class="alert-message">Intertropical Convergence Zone affecting Southern Luzon. Cloudy skies with scattered rainshowers and thunderstorms expected over Laguna.</div>
+                `;
+                alertsList.prepend(sampleAlert);
+            }, 2000);
+        });
+    </script>
+</body>
+</html>
